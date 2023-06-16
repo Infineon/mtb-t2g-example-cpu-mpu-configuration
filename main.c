@@ -158,24 +158,39 @@ int main(void)
     cyhal_wdt_t wdt_obj;
 
     /* Clear watchdog timer so that it doesn't trigger a reset */
-    CY_ASSERT(cyhal_wdt_init(&wdt_obj, cyhal_wdt_get_max_timeout_ms()) == CY_RSLT_SUCCESS);
+    if (cyhal_wdt_init(&wdt_obj, cyhal_wdt_get_max_timeout_ms()) != CY_RSLT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
     cyhal_wdt_free(&wdt_obj);
 #endif
 
     /* Initialize the device and board peripherals */
-    CY_ASSERT(cybsp_init() == CY_RSLT_SUCCESS);
+    if (cybsp_init() != CY_RSLT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
 
     /* Enable global interrupts */
     __enable_irq();
 
     /* Initialize retarget-io to use the debug UART port */
-    CY_ASSERT(cy_retarget_io_init(CYBSP_DEBUG_UART_TX, CYBSP_DEBUG_UART_RX, CY_RETARGET_IO_BAUDRATE) == CY_RSLT_SUCCESS);
+    if (cy_retarget_io_init(CYBSP_DEBUG_UART_TX, CYBSP_DEBUG_UART_RX, CY_RETARGET_IO_BAUDRATE) != CY_RSLT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
 
     /* Setup the MPU */
-    CY_ASSERT(Cy_Prot_ConfigMpuStruct(&mpuStruct, MPU_CFG) == CY_PROT_SUCCESS);
+    if (Cy_Prot_ConfigMpuStruct(&mpuStruct, MPU_CFG) != CY_PROT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
 
     /* Enable the MPU */
-    CY_ASSERT(Cy_Prot_EnableMpuStruct(&mpuStruct) == CY_PROT_SUCCESS);
+    if (Cy_Prot_EnableMpuStruct(&mpuStruct) != CY_PROT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
 
     /* \x1b[2J\x1b[;H - ANSI ESC sequence for clear screen */
     printf("\x1b[2J\x1b[;H");
