@@ -1,6 +1,6 @@
 /**********************************************************************************************************************
  * \file main.c
- * \copyright Copyright (C) Infineon Technologies AG 2019
+ * \copyright Copyright (C) Infineon Technologies AG 2024
  *
  * Use of this file is subject to the terms of use agreed between (i) you or the company in which ordinary course of
  * business you are acting and (ii) Infineon Technologies AG or its licensees. If and as long as no such terms of use
@@ -27,7 +27,7 @@
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
-#include "cyhal.h"
+#include "cy_pdl.h"
 #include "cybsp.h"
 #include "cy_retarget_io.h"
 #include "cy_prot.h"
@@ -43,7 +43,7 @@
 #define REGION_5_ADDR       (0xE0000000ul) /* Region 5 Start Address */
 
 #define TEST_1_ADDR         (0x10000000ul) /* Access Test 1 Target Address */
-#define TEST_2_ADDR         (0x280C0000ul) /* Access Test 2 Target Address */
+#define TEST_2_ADDR         (0x2800C000ul) /* Access Test 2 Target Address */
 #define TEST_3_ADDR         (0x28100000ul) /* Access Test 3 Target Address */
 
 /*********************************************************************************************************************/
@@ -152,18 +152,6 @@ int main(void)
     uint8_t                     uartReadValue;              /* Variable for storing character read from terminal */
     uint32_t                    addrReadValue;              /* Variable for storing character read from memory */
     PROT_MPU_MPU_STRUCT_Type    mpuStruct;                  /* Variable to store the memory protection struct */
-//    cy_rslt_t                   result;
-
-#if defined (CY_DEVICE_SECURE)
-    cyhal_wdt_t wdt_obj;
-
-    /* Clear watchdog timer so that it doesn't trigger a reset */
-    if (cyhal_wdt_init(&wdt_obj, cyhal_wdt_get_max_timeout_ms()) != CY_RSLT_SUCCESS)
-    {
-        CY_ASSERT(0);
-    }
-    cyhal_wdt_free(&wdt_obj);
-#endif
 
     /* Initialize the device and board peripherals */
     if (cybsp_init() != CY_RSLT_SUCCESS)
@@ -175,10 +163,9 @@ int main(void)
     __enable_irq();
 
     /* Initialize retarget-io to use the debug UART port */
-    if (cy_retarget_io_init(CYBSP_DEBUG_UART_TX, CYBSP_DEBUG_UART_RX, CY_RETARGET_IO_BAUDRATE) != CY_RSLT_SUCCESS)
-    {
-        CY_ASSERT(0);
-    }
+    Cy_SCB_UART_Init(UART_HW, &UART_config, NULL);
+    Cy_SCB_UART_Enable(UART_HW);
+    cy_retarget_io_init(UART_HW);
 
     /* Setup the MPU */
     if (Cy_Prot_ConfigMpuStruct(&mpuStruct, MPU_CFG) != CY_PROT_SUCCESS)
@@ -204,26 +191,24 @@ int main(void)
     for (;;)
     {
         /* Check if '1' key, '2' key or '3' key was pressed */
-        if (cyhal_uart_getc(&cy_retarget_io_uart_obj, &uartReadValue, 1) == CY_RSLT_SUCCESS)
+        uartReadValue = Cy_SCB_UART_Get(UART_HW);
+        if (uartReadValue == '1')
         {
-            if (uartReadValue == '1')
-            {
-                /* read from TEST_1_ADDR */
-                addrReadValue = *(volatile uint32_t*)(TEST_1_ADDR);
-                printf("Read from 0x%08x returned: %lu\r\n\n", (unsigned int)TEST_1_ADDR, addrReadValue);
-            }
-            if (uartReadValue == '2')
-            {
-                /* read from TEST_2_ADDR */
-                addrReadValue = *(volatile uint32_t*)(TEST_2_ADDR);
-                printf("Read from 0x%08x returned: %lu\r\n\n", (unsigned int)TEST_2_ADDR, addrReadValue);
-            }
-            if (uartReadValue == '3')
-            {
-                /* read from TEST_3_ADDR */
-                addrReadValue = *(volatile uint32_t*)(TEST_3_ADDR);
-                printf("Read from 0x%08x returned: %lu\r\n\n", (unsigned int)TEST_3_ADDR, addrReadValue);
-            }
+            /* read from TEST_1_ADDR */
+            addrReadValue = *(volatile uint32_t*)(TEST_1_ADDR);
+            printf("Read from 0x%08x returned: %lu\r\n\n", (unsigned int)TEST_1_ADDR, addrReadValue);
+        }
+        if (uartReadValue == '2')
+        {
+            /* read from TEST_2_ADDR */
+            addrReadValue = *(volatile uint32_t*)(TEST_2_ADDR);
+            printf("Read from 0x%08x returned: %lu\r\n\n", (unsigned int)TEST_2_ADDR, addrReadValue);
+        }
+        if (uartReadValue == '3')
+        {
+            /* read from TEST_3_ADDR */
+            addrReadValue = *(volatile uint32_t*)(TEST_3_ADDR);
+            printf("Read from 0x%08x returned: %lu\r\n\n", (unsigned int)TEST_3_ADDR, addrReadValue);
         }
     }
 }
