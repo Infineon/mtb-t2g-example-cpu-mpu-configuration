@@ -1,6 +1,6 @@
 /**********************************************************************************************************************
  * \file main.c
- * \copyright Copyright (C) Infineon Technologies AG 2024
+ * \copyright Copyright (C) Infineon Technologies AG 2019
  *
  * Use of this file is subject to the terms of use agreed between (i) you or the company in which ordinary course of
  * business you are acting and (ii) Infineon Technologies AG or its licensees. If and as long as no such terms of use
@@ -31,6 +31,7 @@
 #include "cybsp.h"
 #include "cy_retarget_io.h"
 #include "cy_prot.h"
+#include "mtb_hal.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -49,6 +50,9 @@
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
+/* For the Retarget -IO (Debug UART) usage */
+static cy_stc_scb_uart_context_t    UART_context;           /** UART context */
+static mtb_hal_uart_t               UART_hal_obj;           /** Debug UART HAL object  */
 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
@@ -149,6 +153,7 @@ void Cy_SysLib_ProcessingFault(void)
  */
 int main(void)
 {
+    cy_rslt_t result;
     uint8_t                     uartReadValue;              /* Variable for storing character read from terminal */
     uint32_t                    addrReadValue;              /* Variable for storing character read from memory */
     PROT_MPU_MPU_STRUCT_Type    mpuStruct;                  /* Variable to store the memory protection struct */
@@ -163,9 +168,27 @@ int main(void)
     __enable_irq();
 
     /* Initialize retarget-io to use the debug UART port */
-    Cy_SCB_UART_Init(UART_HW, &UART_config, NULL);
+    /* Debug UART init */
+    result = (cy_rslt_t)Cy_SCB_UART_Init(UART_HW, &UART_config, &UART_context);
+    if (result != CY_RSLT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
+
     Cy_SCB_UART_Enable(UART_HW);
-    cy_retarget_io_init(UART_HW);
+
+    /* Setup the HAL UART */
+    result = mtb_hal_uart_setup(&UART_hal_obj, &UART_hal_config, &UART_context, NULL);
+    if (result != CY_RSLT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
+
+    result = cy_retarget_io_init(&UART_hal_obj);
+    if (result != CY_RSLT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
 
     /* Setup the MPU */
     if (Cy_Prot_ConfigMpuStruct(&mpuStruct, MPU_CFG) != CY_PROT_SUCCESS)
@@ -185,7 +208,8 @@ int main(void)
     printf("****************** "
            "Memory protection using the MPU"
            "****************** \r\n\n");
-    printf("1: Read from 0x%08x, 2: Read from 0x%08x, 3: Read from 0x%08x\r\n", (unsigned int)TEST_1_ADDR, (unsigned int)TEST_2_ADDR, (unsigned int)TEST_3_ADDR);
+    printf("1: Read from 0x%08x, 2: Read from 0x%08x, 3: Read from 0x%08x\r\n", (unsigned int)TEST_1_ADDR, 
+            (unsigned int)TEST_2_ADDR, (unsigned int)TEST_3_ADDR);
     printf("Press 1 or 2 to display the data to be read. Pressing 3 will generate an exception.\r\n\n");
 
     for (;;)
